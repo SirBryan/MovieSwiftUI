@@ -25,10 +25,11 @@ struct MovieBackdropInfo : View {
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text(movie.original_title)
+                Text(movie.userTitle)
                     .font(.FHACondFrenchNC(size: 28))
-                    .color(.white)
+                    .color(.steam_gold)
                     .lineLimit(nil)
+                    .padding(.leading)
                 HStack {
                     Text(movie.release_date.prefix(4))
                         .font(.subheadline)
@@ -47,17 +48,24 @@ struct MovieBackdropInfo : View {
                             .transition(transition)
                             .animation(animation)
                     }
+                }.padding(.leading)
+                if movie.production_countries?.isEmpty == false {
+                    Text("\(movie.production_countries!.first!.name)")
+                        .font(.subheadline)
+                        .color(.white)
+                        .padding(.leading)
+                        .padding(.bottom, 4)
                 }
                 ScrollView(showsHorizontalIndicator: false) {
                     HStack {
                         ForEach(movie.genres ?? []) { genre in
                             GenreBadge(genre: genre)
                         }
-                    }
+                    }.padding(.leading)
                     }.frame(height: 30)
             }
             }
-            .padding(.leading)
+            .listRowInsets(EdgeInsets())
             .padding(.bottom)
     }
 }

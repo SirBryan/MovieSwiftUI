@@ -14,7 +14,8 @@ struct MoviesActions {
     
     struct FetchPopular: Action {
         init(page: Int) {
-            APIService.shared.GET(endpoint: .popular, params: ["page": "\(page)"]) {
+            APIService.shared.GET(endpoint: .popular, params: ["page": "\(page)",
+                                                                "region": AppUserDefaults.region]) {
                 (result: Result<PaginatedResponse<Movie>, APIService.APIError>) in
                 switch result {
                 case let .success(response):
@@ -28,7 +29,8 @@ struct MoviesActions {
     
     struct FetchTopRated: Action {
         init(page: Int) {
-            APIService.shared.GET(endpoint: .toRated, params: ["region": "US", "page": "\(page)"]) {
+            APIService.shared.GET(endpoint: .toRated, params: ["page": "\(page)",
+                                                                "region": AppUserDefaults.region]) {
                 (result: Result<PaginatedResponse<Movie>, APIService.APIError>) in
                 switch result {
                 case let .success(response):
@@ -42,7 +44,8 @@ struct MoviesActions {
     
     struct FetchUpcoming: Action {
         init(page: Int) {
-            APIService.shared.GET(endpoint: .upcoming, params: ["region": "US", "page": "\(page)"]) {
+            APIService.shared.GET(endpoint: .upcoming, params: ["page": "\(page)",
+                                                                "region": AppUserDefaults.region]) {
                 (result: Result<PaginatedResponse<Movie>, APIService.APIError>) in
                 switch result {
                 case let .success(response):
@@ -56,7 +59,8 @@ struct MoviesActions {
     
     struct FetchNowPlaying: Action {
         init(page: Int) {
-            APIService.shared.GET(endpoint: .nowPlaying, params: ["region": "US", "page": "\(page)"]) {
+            APIService.shared.GET(endpoint: .nowPlaying, params: ["page": "\(page)",
+                                                                    "region": AppUserDefaults.region]) {
                 (result: Result<PaginatedResponse<Movie>, APIService.APIError>) in
                 switch result {
                 case let .success(response):
@@ -70,7 +74,9 @@ struct MoviesActions {
     
     struct FetchDetail: Action {
         init(movie: Int) {
-            APIService.shared.GET(endpoint: .detail(movie: movie), params: nil) {
+            APIService.shared.GET(endpoint: .detail(movie: movie), params: ["append_to_response": "keywords,images",
+                                                                            "language": "en-US",
+                                                                            "include_image_language": "en"]) {
                 (result: Result<Movie, APIService.APIError>) in
                 switch result {
                 case let .success(response):
@@ -188,20 +194,6 @@ struct MoviesActions {
     
     
     
-    struct FetchMovieKeywords: Action {
-        init(movie: Int) {
-            APIService.shared.GET(endpoint: .keywords(movie: movie), params: nil) {
-                (result: Result<KeywordResponse, APIService.APIError>) in
-                switch result {
-                case let .success(response):
-                    store.dispatch(action: SetMovieKeywords(movie: movie, keywords: response.keywords))
-                case .failure(_):
-                    break
-                }
-            }
-        }
-    }
-    
     struct FetchMovieWithKeywords: Action {
         init(keyword: Int) {
             APIService.shared.GET(endpoint: .discover, params: ["with_keywords": "\(keyword)"])
@@ -227,26 +219,6 @@ struct MoviesActions {
                 switch result {
                 case let .success(response):
                     store.dispatch(action: SetRandomDiscover(filter: filter!, response: response))
-                case .failure(_):
-                    break
-                }
-            }
-        }
-    }
-    
-    struct MovieImagesResponse: Codable {
-        let id: Int
-        let backdrops: [MovieImage]?
-        let posters: [MovieImage]?
-    }
-    
-    struct FetchMovieImages: Action {
-        init(movie: Int) {
-            APIService.shared.GET(endpoint: .images(movie: movie), params: ["language": "en-US", "include_image_language": "en"])
-            { (result: Result<MovieImagesResponse, APIService.APIError>) in
-                switch result {
-                case let .success(response):
-                    store.dispatch(action: SetMovieImages(movie: movie, response: response))
                 case .failure(_):
                     break
                 }
@@ -310,11 +282,6 @@ struct MoviesActions {
         let keywords: [Keyword]
     }
     
-    struct SetMovieKeywords: Action {
-        let movie: Int
-        let keywords: [Keyword]
-    }
-
     struct SetSearch: Action {
         let query: String
         let page: Int
@@ -330,19 +297,19 @@ struct MoviesActions {
         let response: PaginatedResponse<Keyword>
     }
     
-    struct addToWishlist: Action {
+    struct AddToWishlist: Action {
         let movie: Int
     }
     
-    struct removeFromWishlist: Action {
+    struct RemoveFromWishlist: Action {
         let movie: Int
     }
     
-    struct addToSeenlist: Action {
+    struct AddToSeenList: Action {
         let movie: Int
     }
     
-    struct removeFromSeenlist: Action {
+    struct RemoveFromSeenList: Action {
         let movie: Int
     }
     
@@ -360,12 +327,7 @@ struct MoviesActions {
         let keyword: Int
         let response: PaginatedResponse<Movie>
     }
-    
-    struct SetMovieImages: Action {
-        let movie: Int
-        let response: MovieImagesResponse
-    }
-    
+        
     struct ResetRandomDiscover: Action {
         
     }
@@ -393,22 +355,22 @@ struct MoviesActions {
     }
     
     struct EditCustomList: Action {
-        let list: UUID
+        let list: Int
         let name: String?
         let cover: Int?
     }
     
     struct AddMovieToCustomList: Action {
-        let list: UUID
+        let list: Int
         let movie: Int
     }
     
     struct RemoveMovieFromCustomList: Action {
-        let list: UUID
+        let list: Int
         let movie: Int
     }
     
     struct RemoveCustomList: Action {
-        let list: UUID
+        let list: Int
     }
 }

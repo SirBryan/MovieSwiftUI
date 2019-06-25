@@ -30,14 +30,16 @@ struct CustomListRow : View {
                 Text(list.name)
                 Text("\(list.movies.count) movies")
             }.blendMode(.overlay)
-        }.frame(height: 50)
+                .padding()
+        }.listRowInsets(EdgeInsets())
+            .frame(height: 50)
     }
 }
 
 #if DEBUG
 struct CustomListRow_Previews : PreviewProvider {
     static var previews: some View {
-        CustomListRow(list: CustomList(name: "Wow", cover: 0, movies: [0]))
+        CustomListRow(list: CustomList(id: 0, name: "Wow", cover: 0, movies: [0]))
             .environmentObject(sampleStore)
     }
 }

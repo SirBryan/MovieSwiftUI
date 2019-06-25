@@ -12,56 +12,60 @@ struct DiscoverView : View {
     
     // MARk: - State vars
     
-    @EnvironmentObject var store: AppStore
-    @State var draggedViewState = DraggableCover.DragState.inactive
-    @State var previousMovie: Int? = nil
-    @State var filterFormPresented = false
-    @State var movieDetailPresented = false
+    @EnvironmentObject private var store: AppStore
+    
+    @State private var draggedViewState = DraggableCover.DragState.inactive
+    @State private var previousMovie: Int? = nil
+    @State private var filterFormPresented = false
+    @State private var movieDetailPresented = false
+    private let hapticFeedback =  UINotificationFeedbackGenerator()
     
     // MARK: - Computed properties
     
-    var movies: [Int] {
+    private var movies: [Int] {
         store.state.moviesState.discover
     }
     
-    var filter: DiscoverFilter? {
+    private var filter: DiscoverFilter? {
         store.state.moviesState.discoverFilter
     }
     
-    var currentMovie: Movie {
+    private var currentMovie: Movie {
         return store.state.moviesState.movies[store.state.moviesState.discover.reversed()[0].id]!
     }
     
-    func scaleResistance() -> Double {
+    private func scaleResistance() -> Double {
         Double(abs(draggedViewState.translation.width) / 5000)
     }
     
-    func dragResistance() -> CGFloat {
+    private func dragResistance() -> CGFloat {
         abs(draggedViewState.translation.width) / 10
     }
     
-    func leftZoneResistance() -> CGFloat {
+    private func leftZoneResistance() -> CGFloat {
         -draggedViewState.translation.width / 1000
     }
     
-    func rightZoneResistance() -> CGFloat {
+    private func rightZoneResistance() -> CGFloat {
         draggedViewState.translation.width / 1000
     }
     
-    func doneGesture(handler: DraggableCover.EndState) {
+    private func draggableCoverEndGestureHandler(handler: DraggableCover.EndState) {
         if handler == .left || handler == .right {
             previousMovie = currentMovie.id
             if handler == .left {
-                store.dispatch(action: MoviesActions.addToWishlist(movie: currentMovie.id))
+                hapticFeedback.notificationOccurred(.success)
+                store.dispatch(action: MoviesActions.AddToWishlist(movie: currentMovie.id))
             } else if handler == .right {
-                store.dispatch(action: MoviesActions.addToSeenlist(movie: currentMovie.id))
+                hapticFeedback.notificationOccurred(.success)
+                store.dispatch(action: MoviesActions.AddToSeenList(movie: currentMovie.id))
             }
             store.dispatch(action: MoviesActions.PopRandromDiscover())
             fetchRandomMovies()
         }
     }
     
-    func fetchRandomMovies() {
+    private func fetchRandomMovies() {
         if movies.count < 10 {
             store.dispatch(action: MoviesActions.FetchRandomDiscover(filter: filter))
         }
@@ -69,20 +73,20 @@ struct DiscoverView : View {
     
     // MARK: - Modals
     
-    var filterFormModal: Modal {
+    private var filterFormModal: Modal {
         Modal(DiscoverFilterForm(isPresented: $filterFormPresented).environmentObject(store),
               onDismiss: {
             self.filterFormPresented = false
         })
     }
     
-    var movieDetailModal: Modal {
+    private var movieDetailModal: Modal {
         Modal(NavigationView{ MovieDetail(movieId: currentMovie.id).environmentObject(store) }) {
             self.movieDetailPresented = false
         }
     }
     
-    var currentModal: Modal? {
+    private var currentModal: Modal? {
         if filterFormPresented {
             return filterFormModal
         } else if movieDetailPresented {
@@ -92,7 +96,7 @@ struct DiscoverView : View {
     }
     
     // MARK: Body views
-    var filterView: some View {
+    private var filterView: some View {
         var text = String("")
         if let startYear = filter?.startYear, let endYear = filter?.endYear {
             text = text + "\(startYear)-\(endYear)"
@@ -116,78 +120,74 @@ struct DiscoverView : View {
         }
     }
     
-    var zonesButtons: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .center) {
-                if !self.movies.isEmpty {
-                    Text(self.currentMovie.original_title)
-                        .color(.primary)
-                        .multilineTextAlignment(.center)
-                        .font(.FHACondFrenchNC(size: 18))
-                        .lineLimit(2)
-                        .opacity(self.draggedViewState.isDragging ? 0.0 : 1.0)
-                        .position(x: geometry.frame(in: .global).midX,
-                                  y: geometry.frame(in: .global).midY + 170)
-                        .animation(.basic())
-                        .tapAction {
-                            self.movieDetailPresented = true
-                    }
-                    
-                    
-                    Circle()
-                        .strokeBorder(Color.pink, lineWidth: 1)
-                        .background(Image(systemName: "heart.fill").foregroundColor(.pink))
-                        .frame(width: 50, height: 50)
-                        .position(x: geometry.frame(in: .global).midX - 50, y: geometry.frame(in: .global).midY + 200)
-                        .opacity(self.draggedViewState.isDragging ? 0.3 + Double(self.leftZoneResistance()) : 0)
-                        .animation(.fluidSpring())
-                    
-                    Circle()
-                        .strokeBorder(Color.green, lineWidth: 1)
-                        .background(Image(systemName: "eye.fill").foregroundColor(.green))
-                        .frame(width: 50, height: 50)
-                        .position(x: geometry.frame(in: .global).midX + 50, y: geometry.frame(in: .global).midY + 200)
-                        .opacity(self.draggedViewState.isDragging ? 0.3 + Double(self.rightZoneResistance()) : 0)
-                        .animation(.fluidSpring())
-                    
-                    
-                    Circle()
-                        .strokeBorder(Color.red, lineWidth: 1)
-                        .background(Image(systemName: "xmark").foregroundColor(.red))
-                        .frame(width: 50, height: 50)
-                        .position(x: geometry.frame(in: .global).midX, y: geometry.frame(in: .global).midY + 230)
-                        .opacity(self.draggedViewState.isDragging ? 0.0 : 1)
-                        .animation(.fluidSpring())
-                        .tapAction {
-                            self.previousMovie = self.currentMovie.id
-                            self.store.dispatch(action: MoviesActions.PopRandromDiscover())
-                            self.fetchRandomMovies()
-                    }
-                    
-                    Button(action: {
-                        self.store.dispatch(action: MoviesActions.PushRandomDiscover(movie: self.previousMovie!))
-                        self.previousMovie = nil
-                    }, label: {
-                        Image(systemName: "gobackward").foregroundColor(.steam_blue)
-                    }) .frame(width: 50, height: 50)
-                        .position(x: geometry.frame(in: .global).midX - 60,
-                                  y: geometry.frame(in: .global).midY + 230)
-                        .opacity(self.previousMovie != nil && !self.draggedViewState.isActive ? 1 : 0)
-                        .animation(.fluidSpring())
-                    
-                    Button(action: {
-                        self.store.dispatch(action: MoviesActions.ResetRandomDiscover())
-                        self.fetchRandomMovies()
-                    }, label: {
-                        Image(systemName: "arrow.swap")
-                            .foregroundColor(.steam_blue)
-                    })
-                        .frame(width: 50, height: 50)
-                        .position(x: geometry.frame(in: .global).midX + 60,
-                                  y: geometry.frame(in: .global).midY + 230)
-                        .opacity(self.draggedViewState.isDragging ? 0.0 : 1.0)
-                        .animation(.fluidSpring())
+    private var actionsButtons: some View {
+        ZStack(alignment: .center) {
+            if !self.movies.isEmpty {
+                Text(self.currentMovie.userTitle)
+                    .color(.primary)
+                    .multilineTextAlignment(.center)
+                    .font(.FHACondFrenchNC(size: 18))
+                    .lineLimit(2)
+                    .opacity(self.draggedViewState.isDragging ? 0.0 : 1.0)
+                    .offset(x: 0, y: -15)
+                    .animation(.basic())
+                    .tapAction {
+                        self.movieDetailPresented = true
                 }
+                
+                
+                Circle()
+                    .strokeBorder(Color.pink, lineWidth: 1)
+                    .background(Image(systemName: "heart.fill").foregroundColor(.pink))
+                    .frame(width: 50, height: 50)
+                    .offset(x: -70, y: 0)
+                    .opacity(self.draggedViewState.isDragging ? 0.3 + Double(self.leftZoneResistance()) : 0)
+                    .animation(.fluidSpring())
+                
+                Circle()
+                    .strokeBorder(Color.green, lineWidth: 1)
+                    .background(Image(systemName: "eye.fill").foregroundColor(.green))
+                    .frame(width: 50, height: 50)
+                    .offset(x: 70, y: 0)
+                    .opacity(self.draggedViewState.isDragging ? 0.3 + Double(self.rightZoneResistance()) : 0)
+                    .animation(.fluidSpring())
+                
+                
+                Circle()
+                    .strokeBorder(Color.red, lineWidth: 1)
+                    .background(Image(systemName: "xmark").foregroundColor(.red))
+                    .frame(width: 50, height: 50)
+                    .offset(x: 0, y: 30)
+                    .opacity(self.draggedViewState.isDragging ? 0.0 : 1)
+                    .animation(.fluidSpring())
+                    .tapAction {
+                        self.hapticFeedback.notificationOccurred(.error)
+                        self.previousMovie = self.currentMovie.id
+                        self.store.dispatch(action: MoviesActions.PopRandromDiscover())
+                        self.fetchRandomMovies()
+                }
+                
+                Button(action: {
+                    self.store.dispatch(action: MoviesActions.PushRandomDiscover(movie: self.previousMovie!))
+                    self.previousMovie = nil
+                }, label: {
+                    Image(systemName: "gobackward").foregroundColor(.steam_blue)
+                }) .frame(width: 50, height: 50)
+                    .offset(x: -50, y: 30)
+                    .opacity(self.previousMovie != nil && !self.draggedViewState.isActive ? 1 : 0)
+                    .animation(.fluidSpring())
+                
+                Button(action: {
+                    self.store.dispatch(action: MoviesActions.ResetRandomDiscover())
+                    self.fetchRandomMovies()
+                }, label: {
+                    Image(systemName: "arrow.swap")
+                        .foregroundColor(.steam_blue)
+                })
+                    .frame(width: 50, height: 50)
+                    .offset(x: 50, y: 30)
+                    .opacity(self.draggedViewState.isDragging ? 0.0 : 1.0)
+                    .animation(.fluidSpring())
             }
         }
     }
@@ -195,15 +195,16 @@ struct DiscoverView : View {
     var body: some View {
         ZStack(alignment: .center) {
             GeometryReader { reader in
-                self.filterView.position(x: reader.frame(in: .global).midX,
-                                    y: 30)
+                    self.filterView
+                        .position(x: reader.frame(in: .global).midX, y: 30)
+                        .frame(height: 50)
             }
             ForEach(movies) {id in
                 if self.movies.reversed().firstIndex(of: id) == 0 {
                     DraggableCover(movieId: id,
                                    gestureViewState: self.$draggedViewState,
                                    endGestureHandler: { handler in
-                                    self.doneGesture(handler: handler)
+                                    self.draggableCoverEndGestureHandler(handler: handler)
                     })
                 } else {
                     DiscoverCoverImage(imageLoader: ImageLoader(poster: self.store.state.moviesState.movies[id]!.poster_path,
@@ -213,10 +214,15 @@ struct DiscoverView : View {
                         .animation(.spring())
                 }
             }
-            zonesButtons
+            GeometryReader { reader in
+                self.actionsButtons
+                    .position(x: reader.frame(in: .global).midX,
+                              y: reader.frame(in: .local).maxY - reader.safeAreaInsets.bottom - 20)
+            }
             }
             .presentation(currentModal)
             .onAppear {
+                self.hapticFeedback.prepare()
                 self.fetchRandomMovies()
         }
     }
